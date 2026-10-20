@@ -19,9 +19,9 @@ VMware（vCenter＋vMotion）の練習を想定していましたが、VCSAはBr
 |---|---|
 | クラスタ | `lab-cluster`、`Nodes: 2`、`Quorate: Yes` |
 | 移行 | `pve01 → pve02`、`migration finished successfully (duration 00:00:08)` |
-| 停止時間（downtime） | **67 ms**（上限 100 ms） |
+| 停止時間（downtime） | **67 ms**（上限 100 ms、タスクログより・画像5） |
 | 転送 | 151.1 MiB の VM-state を 1.0 GiB/s、移行専用ネットワーク `10.10.10.22` 経由 |
-| 移行後の疎通 | ホスト → test-vm：259送信 / 259受信、**0% packet loss** |
+| 移行後の疎通 | test-vm 内の ping（→ 192.168.100.1）が、移行後も pve02 上で継続（画像6） |
 
 ## 構成
 
