@@ -4,7 +4,8 @@
 set -euo pipefail
 HOST=${1:?パブリックIPを指定}
 KEY=${2:-$HOME/.ssh/test-ec2-key.pem}
-pkill -f "ssh .*$HOST" 2>/dev/null || true
+# 古いトンネル（-f -N で張ったもの）だけを止める。作業用の普通の SSH は止めない
+pkill -f "ssh -f -N.*$HOST" 2>/dev/null || true
 sleep 1
 ssh -f -N -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -i "$KEY" \
   -L 5901:127.0.0.1:5901 -L 5902:127.0.0.1:5902 -D 1080 ubuntu@"$HOST"

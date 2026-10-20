@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # EC2 側で実行：クラスタ作成・NFS登録・移行ネットワーク・テストVM作成
+# 途中で pve01 / pve02 の root パスワードを聞かれます（最初の鍵配布と、クラスタ参加時）
 set -euo pipefail
 P1=192.168.100.21; P2=192.168.100.22
 
+# EC2 → 各ノードへパスワードなしで ssh できるようにする（済んでいれば何もしない）
+[ -f ~/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+for IP in $P1 $P2; do
+  ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@$IP true 2>/dev/null \
+    || ssh-copy-id -o StrictHostKeyChecking=accept-new root@$IP
+done
+
 ssh root@$P1 "pvecm status >/dev/null 2>&1 || pvecm create lab-cluster --link0 $P1"
-ssh root@$P2 "pvecm status >/dev/null 2>&1 || pvecm add $P1 --link0 $P2"
+# pvecm add は pve01 の root パスワードを対話で聞くため -t が必要
+ssh -t root@$P2 "pvecm status >/dev/null 2>&1 || pvecm add $P1 --link0 $P2"
 ssh root@$P1 "pvecm status | grep -E 'Nodes|Quorate'"
 
 ssh root@$P1 "pvesm status | grep -q nfs-shared || pvesm add nfs nfs-shared --server 192.168.100.1 --export /srv/nfs/pve --content images,iso"

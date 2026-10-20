@@ -3,11 +3,18 @@
 # 使い方: ./04-live-migrate.sh pve02   （戻すときは pve01）
 set -euo pipefail
 TARGET=${1:-pve02}
-SRC=$([ "$TARGET" = pve02 ] && echo 192.168.100.21 || echo 192.168.100.22)
-ping -D 192.168.100.50 > /tmp/mig-ping.log 2>&1 &
+case "$TARGET" in
+  pve02) SRC=192.168.100.21 ;;
+  pve01) SRC=192.168.100.22 ;;
+  *) echo "移行先は pve01 か pve02 を指定してください"; exit 1 ;;
+esac
+LOG=/tmp/mig-ping.log
+
+ping -D 192.168.100.50 > "$LOG" 2>&1 &
 PID=$!
+# 途中で失敗しても ping を必ず止めて統計を表示する
+trap 'kill -INT $PID 2>/dev/null || true; sleep 1; echo "--- ping ---"; tail -3 "$LOG"' EXIT
+
 sleep 5
-ssh root@$SRC "qm migrate 100 $TARGET --online" | grep -E "dedicated|downtime|finished"
+ssh root@$SRC "qm migrate 100 $TARGET --online" | grep -E "dedicated|downtime|finished" || true
 sleep 5
-kill -INT $PID; sleep 1
-tail -3 /tmp/mig-ping.log

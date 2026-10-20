@@ -28,7 +28,7 @@ VMware（vCenter＋vMotion）の練習を想定していましたが、VCSAはBr
 ```
 Mac ──SSH(22) + ポートフォワード(5901/5902 VNC, 1080 SOCKS)──┐
                                                              ▼
-EC2 m5zn.metal（Ubuntu 24.04 / KVM・NFS・DNS・NTP）
+EC2 m5zn.metal（Ubuntu 26.04 / KVM・NFS・DNS・NTP）
  ├─ labnet  192.168.100.0/24（NAT、管理・NFS・VM通信）
  ├─ vmnet   10.10.10.0/24  （閉域、ライブマイグレーション専用）
  ├─ pve01   192.168.100.21 / 10.10.10.21  (8vCPU / 16GB / 64GB)
@@ -37,7 +37,7 @@ EC2 m5zn.metal（Ubuntu 24.04 / KVM・NFS・DNS・NTP）
  └─ NFS     192.168.100.1:/srv/nfs/pve
 ```
 
-使用バージョン：Proxmox VE 9.2（ISO `proxmox-ve_9.2-1.iso`、Web UI 9.2.2）／Alpine `3.24.2` virt／Ubuntu Server 24.04 LTS
+使用バージョン：Proxmox VE 9.2（ISO `proxmox-ve_9.2-1.iso`、Web UI 9.2.2）／Alpine `3.24.2` virt／Ubuntu Server 26.04 LTS
 
 ## スクリーンショット
 
@@ -59,14 +59,22 @@ EC2 m5zn.metal（Ubuntu 24.04 / KVM・NFS・DNS・NTP）
 ### 6. 移行後：test-vm が pve02 配下に移動、コンソールの ping も継続
 ![移行後](images/06-after-migration-pve02.png)
 
+※ 下部タスク履歴の「更新パッケージデータベース」のエラーは、サブスクリプションなしで enterprise リポジトリを参照しているためで、検証には影響しません（no-subscription リポジトリへの切り替え手順は [docs/procedure.md](docs/procedure.md) の手順3に記載）。
+
 ## ドキュメント
 
 - [docs/procedure.md](docs/procedure.md) … 構築手順書（実際に通ったコマンドに更新済み）
 - [docs/troubleshooting.md](docs/troubleshooting.md) … 実際にハマったエラーと解決方法
 - [scripts/](scripts/) … 手順をまとめたスクリプト
 
+## 次にやること
+
+- ノード障害時の HA（自動フェイルオーバー）の検証。2ノード構成では片方が落ちるとクォーラムを失うため、QDevice（第3の投票者）を追加して確認する
+- EC2 と KVM 側の構築を Terraform などでコード化し、作成から削除までを再現できるようにする
+
 ## 注意
 
 - ベアメタルは1時間あたり数ドルかかります。検証後は必ずインスタンスを**終了（Terminate）**してください
 - 秘密鍵（`.pem`）はリポジトリに入れないでください（`.gitignore` 済み）
 - パスワードやパブリックIPは `<...>` のプレースホルダに置き換えています
+- NFS の `chmod 777` と `no_root_squash`、Proxmox への root での SSH は、閉じたネットワーク内の検証用の設定です。本番環境では権限を絞り、専用ユーザーを使ってください
