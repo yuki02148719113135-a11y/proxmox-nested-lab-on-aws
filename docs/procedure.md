@@ -29,7 +29,7 @@ AWSベアメタルEC2 1台の上にKVMでProxmox VEを2台立ててクラスタ�
 
 ## 手順1：ベアメタルEC2を起動
 
-- AMI：Ubuntu Server 24.04 LTS（x86_64）
+- AMI：Ubuntu Server 26.04 LTS（x86_64）
 - インスタンスタイプ：`m5zn.metal`（48 vCPU / 192GiB）
 - ストレージ：ルートを gp3 200GB
 - 起動に5〜10分かかる
@@ -51,6 +51,8 @@ ls -lh /srv/iso
 ```
 
 ## 手順2：KVM・ネットワーク・NFS
+
+⚠ 実作業での修正：Ubuntu 26.04 では `qemu-kvm` が仮想パッケージになり `apt install` が止まるため、`qemu-system-x86` を指定する。
 
 ```bash
 sudo apt update
@@ -137,7 +139,7 @@ sudo virsh vncdisplay pve02             # 127.0.0.1:2
 ⚠ 実作業での修正：`-f -N` でバックグラウンド化、`ExitOnForwardFailure` で失敗を即検知。張り直す前に古いトンネルを必ず止める。
 
 ```bash
-pkill -f "ssh .*<パブリックIP>"; sleep 1
+pkill -f "ssh -f -N.*<パブリックIP>"; sleep 1   # トンネルだけを止める
 ssh -f -N -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes \
   -i ~/.ssh/<key>.pem \
   -L 5901:127.0.0.1:5901 -L 5902:127.0.0.1:5902 -D 1080 \
@@ -167,6 +169,24 @@ curl -sk -o /dev/null -w "8006応答=%{http_code}\n" https://192.168.100.22:8006
 ```
 
 Web UI：`https://pve01.lab.local:8006`（開けなければ `https://192.168.100.21:8006`）、ユーザー `root`、レルム **Linux PAM**。
+
+### パッケージリポジトリを no-subscription に切り替える（2台とも、任意）
+
+サブスクリプションなしのままだと、タスク履歴に「更新パッケージデータベース」のエラーが出続けます。検証には影響しませんが、各ノードで次を実行すると消えます。
+
+```bash
+cd /etc/apt/sources.list.d
+mv pve-enterprise.sources pve-enterprise.sources.disabled
+[ -f ceph.sources ] && mv ceph.sources ceph.sources.disabled
+cat <<'EOF' > proxmox.sources
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+EOF
+apt update
+```
 
 ## 手順4：クラスタ作成
 

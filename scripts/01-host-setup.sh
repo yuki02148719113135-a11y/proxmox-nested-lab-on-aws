@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# EC2（Ubuntu 24.04）側：KVM・ネットワーク・NFS・NTPを構築
+# EC2（Ubuntu 26.04）側：KVM・ネットワーク・NFS・NTPを構築
 set -euo pipefail
 
 sudo apt update

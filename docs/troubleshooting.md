@@ -22,6 +22,7 @@
 | 13 | 手順書の NIC 名と違う | Proxmox 9 は `nic0` / `nic1` | 実名を確認して設定 |
 | 14 | 「移行」ボタンがない | UI表記が「マイグレート」 | 同じ機能。モードは自動で「オンライン」 |
 | 15 | ボリュームが削除できない | インスタンスにアタッチ中 | インスタンスを「終了」すると自動削除 |
+| 16 | `Package 'qemu-kvm' has no installation candidate` | Ubuntu 26.04 では `qemu-kvm` が仮想パッケージ | `qemu-system-x86` を指定 |
 
 ---
 
@@ -159,7 +160,7 @@ Firefox のプロキシ設定は効いているが、Mac 側の 1080 番に誰�
 **対応**
 
 ```bash
-pkill -f "ssh .*<パブリックIP>"; sleep 1
+pkill -f "ssh -f -N.*<パブリックIP>"; sleep 1   # トンネルだけを止める
 ssh -f -N -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -i ~/.ssh/<key>.pem \
   -L 5901:127.0.0.1:5901 -L 5902:127.0.0.1:5902 -D 1080 ubuntu@<パブリックIP>
 lsof -nP -iTCP:1080 -sTCP:LISTEN
@@ -245,6 +246,24 @@ nic1  DOWN  52:54:00:...
 ## 15. EBS ボリュームが削除できない
 
 インスタンスにアタッチされている（使用中）ボリュームは削除できない。インスタンスを「**終了**」すれば、ルートボリュームは自動で削除される。ベアメタルは終了完了まで5〜10分かかる。
+
+## 16. `qemu-kvm` がインストールできない
+
+```
+Package qemu-kvm is a virtual package provided by:
+  qemu-system-x86-hwe ...
+  qemu-system-x86 ...
+Error: Package 'qemu-kvm' has no installation candidate
+```
+
+**原因**：AMI が Ubuntu 26.04 で、`qemu-kvm` が実体のない仮想パッケージになっていた。エラーで `apt install` 全体が止まり、libvirt なども入っていなかった。
+
+**対応**：`qemu-system-x86` を明示して入れ直す。
+
+```bash
+sudo apt install -y qemu-system-x86 libvirt-daemon-system virtinst nfs-kernel-server chrony tmux
+sudo virsh list --all   # エラーなく空の表が出ればOK
+```
 
 ---
 
